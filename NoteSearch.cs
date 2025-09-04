@@ -1,4 +1,4 @@
-﻿using Parser.Map.Difficulty.V3.Base;
+﻿using Parser.Map;
 using Parser.Utils;
 using ReplayDecoder;
 
@@ -99,7 +99,8 @@ namespace MapPostprocessor
 			var foundNotes = TryFindingNotes(map, replay, map.Notes);
 
 			if (foundNotes.Keys.Count < map.Notes.Count) {
-				var mirrored = MapWrapper.Process(ChiralitySupport.Mirror_Horizontal(map.Difficulty, 4, true, false, false));
+				var mirroredData = ChiralitySupport.Mirror_Horizontal(map.Difficulty.Data, 4, true, false, false);
+				var mirrored = MapWrapper.Process(new DifficultySet(map.Difficulty.Difficulty, map.Difficulty.Characteristic, mirroredData, map.Difficulty.BeatMap));
 				var foundMirrored = TryFindingNotes(map, replay, mirrored.Notes);
 
 				if (foundMirrored.Keys.Count > foundNotes.Keys.Count) {

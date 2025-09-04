@@ -1,11 +1,12 @@
-﻿using Parser.Map.Difficulty.V3.Base;
+﻿using Parser.Map;
+using Parser.Map.Difficulty.V3.Base;
 using Parser.Map.Difficulty.V3.Grid;
 
 namespace MapPostprocessor
 {
     public class MapWrapper
     {
-		public DifficultyV3 Difficulty { get; set; }
+		public DifficultySet Difficulty { get; set; }
         public List<NoteWrapper> Notes { get; set; }
         public List<BombWrapper> Bombs { get; set; }
         public List<WallWrapper> Walls { get; set; }
@@ -188,14 +189,14 @@ namespace MapPostprocessor
 			}
 		}
 
-        public static MapWrapper Process(DifficultyV3 difficulty) {
+        public static MapWrapper Process(DifficultySet difficulty) {
             var map = new MapWrapper { Difficulty = difficulty };
 
-            map.Notes = difficulty.Notes.Select(n => new NoteWrapper { Note = n }).ToList();
-            map.Bombs = difficulty.Bombs.Select(b => new BombWrapper { Note = b }).ToList();
-            map.Walls = difficulty.Walls.Select(w => new WallWrapper { Note = w }).ToList();
+            map.Notes = difficulty.Data.Notes.Select(n => new NoteWrapper { Note = n }).ToList();
+            map.Bombs = difficulty.Data.Bombs.Select(b => new BombWrapper { Note = b }).ToList();
+            map.Walls = difficulty.Data.Walls.Select(w => new WallWrapper { Note = w }).ToList();
 
-			map.AddScoringTypeAndChains(difficulty);
+			map.AddScoringTypeAndChains(difficulty.Data);
 			map.SetIds();
 
             return map;

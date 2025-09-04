@@ -2,6 +2,22 @@
 
 namespace MapPostprocessor
 {
+    public struct ParamOverride {
+        public float Param1 { get; set; }
+        public float Param2 { get; set; }
+        public float Param3 { get; set; }
+        public float Param4 { get; set; }
+
+        public ParamOverride(float param1, float param2, float param3, float param4) : this()
+        {
+            this.Param1 = param1;
+            this.Param2 = param2;
+            this.Param3 = param3;
+            this.Param4 = param4;
+        }
+
+        
+    }
     public static class NoteExtensions 
     {
         static void encodeInt(float[,] array, int count, ref int index, int min, int value, int limit)
@@ -12,7 +28,7 @@ namespace MapPostprocessor
             }
         }
 
-        public static void EncodeToArray<T>(this IWrapper<T> note, float[,] array, int count, float _time) where T : BeatmapGridObject
+        public static void EncodeToArray<T>(this IWrapper<T> note, float[,] array, int count, float _time, ParamOverride? paramOverride = null) where T : BeatmapGridObject
         {
             int index = 0;
             array[count, +index++] = note.Time - _time;
@@ -20,8 +36,13 @@ namespace MapPostprocessor
             //array[count, index++] = type == 0 ? param2 * 0.5f : param2;
             //array[count, index++] = type == 0 ? param3 * 0.5f : param3;
             
+            if (paramOverride != null) {
 
-            if (note.Event != null && note.Event.noteCutInfo != null) {
+                array[count, +index++] = paramOverride?.Param1 ?? 0;
+                array[count, +index++] = paramOverride?.Param2 ?? 0;
+                array[count, +index++] = paramOverride?.Param3 ?? 0;
+                array[count, +index++] = paramOverride?.Param4 ?? 0;
+            } else if (note.Event != null && note.Event.noteCutInfo != null) {
                 var noteCutInfo = note.Event.noteCutInfo;
 
                 array[count, +index++] = noteCutInfo.beforeCutRating / 2;
