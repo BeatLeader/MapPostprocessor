@@ -99,14 +99,14 @@ namespace MapPostprocessor
 			var foundNotes = TryFindingNotes(map, replay, map.Notes);
 
 			if (foundNotes.Keys.Count < map.Notes.Count) {
-				var mirroredData = ChiralitySupport.Mirror_Horizontal(map.Difficulty.Data, 4, true, false, false);
+				var mirroredData = ChiralitySupport.Mirror_Horizontal(map.Difficulty.Data, 4, true, false);
 				var mirrored = MapWrapper.Process(new DifficultySet(map.Difficulty.Difficulty, map.Difficulty.Characteristic, mirroredData, map.Difficulty.BeatMap));
 				var foundMirrored = TryFindingNotes(map, replay, mirrored.Notes);
 
 				if (foundMirrored.Keys.Count > foundNotes.Keys.Count) {
 					result = mirrored;
 				} else {
-					Console.WriteLine($"Broken replay {replay.info.hash} {replay.info.playerName} {replay.info.difficulty} {replay.info.mode}");
+					//Console.WriteLine($"Broken replay {replay.info.hash} {replay.info.playerName} {replay.info.difficulty} {replay.info.mode}");
 				}
 			}
 

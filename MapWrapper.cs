@@ -103,7 +103,7 @@ namespace MapPostprocessor
 						head.ScoringType = ScoringType.ArcHeadArcTail;
 					}
 				}
-				var tail = Notes.FirstOrDefault(n => CompareSliderTail(n.Note, slider));
+				var tail = slider.TailBpmTime == slider.BpmTime ? null : Notes.FirstOrDefault(n => CompareSliderTail(n.Note, slider));
 				//if (head) {
 				//	head.tail = tail;
 				//}
@@ -239,7 +239,7 @@ namespace MapPostprocessor
 				} else if (mapnote.ScoringType == ScoringType.ChainHeadArcHead) {
 					legacyScoringType = ScoringType.ChainHead + 2;
 				} else if (mapnote.ScoringType == ScoringType.ChainHeadArcHeadArcTail) {
-					legacyScoringType = ScoringType.ChainHead + 2;
+					legacyScoringType = ScoringType.ChainHeadArcTail + 2;
 				}
 
 				mapnote.IdWithAlternativeScoring = id + (int)altscoringType * 10000;

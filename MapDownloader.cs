@@ -1,5 +1,6 @@
-﻿using Newtonsoft.Json;
-using System.IO.Compression;
+﻿using System.IO.Compression;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace MapPostprocessor
 {
@@ -47,11 +48,11 @@ namespace MapPostprocessor
 
             string beatsaverUrl = $"https://beatsaver.com/api/maps/hash/{hash}";
             using var httpClient = new HttpClient();
-            dynamic? beatsaverData = null;
+            JsonNode? beatsaverData = null;
             string? downloadURL = null;
             try {
                 var response = await httpClient.GetStringAsync(beatsaverUrl);
-                beatsaverData = response != null ? JsonConvert.DeserializeObject(response) : null;
+                beatsaverData = response != null ? JsonSerializer.Deserialize<JsonNode>(response) : null;
                 downloadURL = string.Empty;
             } catch (Exception e) {
                 return null;
@@ -61,11 +62,11 @@ namespace MapPostprocessor
                 return null;
             }
 
-            foreach (var version in beatsaverData.versions)
+            foreach (var version in beatsaverData["versions"]?.AsArray() ?? [])
             {
-                if (version.hash.ToString().ToLower() == hash.ToLower())
+                if (version?["hash"]?.AsValue().ToString().ToLower() == hash.ToLower())
                 {
-                    downloadURL = version.downloadURL;
+                    downloadURL = version?["downloadURL"]?.AsValue().ToString() ?? "";
                     break;
                 }
             }
