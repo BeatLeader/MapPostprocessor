@@ -76,9 +76,9 @@ namespace MapPostprocessor
                 encodeInt(array, count, ref index, 0, -2, 12);
                 //encodeInt(array, count, ref index, 0, note.LineIndex, 3);
                 //encodeInt(array, count, ref index, 0, note.LineLayer, 2);
-                array[count, +index++] = note.Rotation / 360.0f;
                 array[count, +index++] = note.X / 2.0f;
                 array[count, +index++] = note.Y / 2.0f;
+                array[count, +index++] = note.Rotation / 360.0f;
 
                 encodeInt(array, count, ref index, 0, note.CutDirection, 9);
 
@@ -104,8 +104,8 @@ namespace MapPostprocessor
         public static void EncodeToArray(this WallWrapper note, float[,] array, int count, float _time, ParamOverride? paramOverride = null)
         {
             int index = 0;
-            array[count, +index++] = note.Time - _time;
-            array[count, +index++] = note.Time + note.Note.DurationInSeconds - _time;
+            array[count, +index++] = Math.Max(note.Time - _time, 0);
+            array[count, +index++] = note.Time - _time > 0 || note.Time + note.Note.DurationInSeconds - _time < 0 ? 0 : 1;
             //array[count, index++] = type == 0 ? param1 * 0.5f : param1;
             //array[count, index++] = type == 0 ? param2 * 0.5f : param2;
             //array[count, index++] = type == 0 ? param3 * 0.5f : param3;
