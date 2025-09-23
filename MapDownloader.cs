@@ -6,11 +6,13 @@ namespace MapPostprocessor
 {
     public class MapDownloader
     {
+        private HttpClient httpClient = new();
         private string _mapsDirectory = "/home/maps";
 
         public MapDownloader(string mapsDirectory)
         {
             _mapsDirectory = mapsDirectory;
+            httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (compatible; BeatSaverDownloader/1.0)");
         }
 
         public bool MapExists(string hash)
@@ -46,8 +48,9 @@ namespace MapPostprocessor
                 return mapDir;
             }
 
+            await Task.Delay(500); // Be nice to the API
+
             string beatsaverUrl = $"https://beatsaver.com/api/maps/hash/{hash}";
-            using var httpClient = new HttpClient();
             JsonNode? beatsaverData = null;
             string? downloadURL = null;
             try {
@@ -76,9 +79,7 @@ namespace MapPostprocessor
                 return null;
             }
 
-            using var client = new HttpClient();
-            client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (compatible; BeatSaverDownloader/1.0)");
-            var data = await client.GetByteArrayAsync(downloadURL);
+            var data = await httpClient.GetByteArrayAsync(downloadURL);
 
             using var zipStream = new MemoryStream(data);
             using var zipArchive = new ZipArchive(zipStream);
