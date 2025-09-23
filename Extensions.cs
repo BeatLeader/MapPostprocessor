@@ -1,4 +1,5 @@
-﻿using Parser.Map.Difficulty.V3.Base;
+﻿using CommunityToolkit.HighPerformance;
+using Parser.Map.Difficulty.V3.Base;
 using Parser.Map.Difficulty.V3.Grid;
 
 namespace MapPostprocessor
@@ -21,7 +22,7 @@ namespace MapPostprocessor
     }
     public static class NoteExtensions 
     {
-        static void encodeInt(float[,] array, int count, ref int index, int min, int value, int limit)
+        static void encodeInt(Span2D<float> array, int count, ref int index, int min, int value, int limit)
         {
             for (int i = min; i <= limit; i++)
             {
@@ -29,7 +30,7 @@ namespace MapPostprocessor
             }
         }
 
-        public static void EncodeToArray<T>(this IWrapper<T> note, float[,] array, int count, float _time, ParamOverride? paramOverride = null) where T : BeatmapGridObject
+        public static void EncodeToArray<T>(this IWrapper<T> note, Span2D<float> array, int count, float _time, ParamOverride? paramOverride = null) where T : BeatmapGridObject
         {
             int index = 0;
             array[count, +index++] = note.Time - _time;
@@ -101,7 +102,7 @@ namespace MapPostprocessor
         }
 
 
-        public static void EncodeToArray(this WallWrapper note, float[,] array, int count, float _time, ParamOverride? paramOverride = null)
+        public static void EncodeToArray(this WallWrapper note, Span2D<float> array, int count, float _time, ParamOverride? paramOverride = null)
         {
             int index = 0;
             array[count, +index++] = Math.Max(note.Time - _time, 0);

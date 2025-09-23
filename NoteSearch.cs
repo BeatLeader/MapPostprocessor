@@ -6,11 +6,11 @@ namespace MapPostprocessor
 {
     public static class NoteSearch
     {
-	 	public static Dictionary<int, bool> TryFindingNotes(MapWrapper map, Replay replay, List<NoteWrapper> mapnotes) {
+	 	public static Dictionary<int, bool> TryFindingNotes(MapWrapper map, Replay replay, NoteWrapper[] mapnotes) {
 			var foundNotes = new Dictionary<int, bool>();
 			var nonBombs = replay.notes.Where(n => n.eventType != NoteEventType.bomb).ToList();
-			for (var j = 0; j < mapnotes.Count; j++) {
-				var mapnote = mapnotes[j];
+			foreach (var mapnote in mapnotes)
+			{
 				for (var m = 0; m < nonBombs.Count; m++) {
 					var replaynote = nonBombs[m];
 
@@ -18,9 +18,9 @@ namespace MapPostprocessor
 						if (
 							Math.Abs(replaynote.spawnTime - mapnote.Time) < 0.0005 &&
 							(replaynote.noteID == mapnote.Id ||
-								replaynote.noteID == mapnote.IdWithScoring ||
-								replaynote.noteID == mapnote.IdWithAlternativeScoring ||
-								replaynote.noteID == mapnote.IdWithLegacyScoring)
+							 replaynote.noteID == mapnote.IdWithScoring ||
+							 replaynote.noteID == mapnote.IdWithAlternativeScoring ||
+							 replaynote.noteID == mapnote.IdWithLegacyScoring)
 						) {
 							mapnote.Event = replaynote;
 							foundNotes[m] = true;
@@ -30,7 +30,7 @@ namespace MapPostprocessor
 				}
 			}
 
-			for (var j = 0; j < mapnotes.Count; j++) {
+			for (var j = 0; j < mapnotes.Length; j++) {
 				var mapnote = mapnotes[j];
 				if (mapnote.Event == null) {
 					for (var m = 0; m < nonBombs.Count; m++) {
@@ -54,11 +54,11 @@ namespace MapPostprocessor
 			return foundNotes;
 		}
 
-		public static Dictionary<int, bool> TryFindingBombs(MapWrapper map, Replay replay, List<BombWrapper> mapnotes) {
+		public static Dictionary<int, bool> TryFindingBombs(MapWrapper map, Replay replay, BombWrapper[] mapnotes) {
 			var foundNotes = new Dictionary<int, bool>();
 			var nonBombs = replay.notes.Where(n => n.eventType == NoteEventType.bomb).ToList();
-			for (var j = 0; j < mapnotes.Count; j++) {
-				var mapnote = mapnotes[j];
+			foreach (var mapnote in mapnotes)
+			{
 				for (var m = 0; m < nonBombs.Count; m++) {
 					var replaynote = nonBombs[m];
 
@@ -66,9 +66,9 @@ namespace MapPostprocessor
 						if (
 							Math.Abs(replaynote.spawnTime - mapnote.Time) < 0.0005 &&
 							(replaynote.noteID == mapnote.Id ||
-								replaynote.noteID == mapnote.IdWithScoring ||
-								replaynote.noteID == mapnote.IdWithAlternativeScoring ||
-								replaynote.noteID == mapnote.IdWithLegacyScoring)
+							 replaynote.noteID == mapnote.IdWithScoring ||
+							 replaynote.noteID == mapnote.IdWithAlternativeScoring ||
+							 replaynote.noteID == mapnote.IdWithLegacyScoring)
 						) {
 							mapnote.Event = replaynote;
 							foundNotes[m] = true;
@@ -98,7 +98,7 @@ namespace MapPostprocessor
 
 			var foundNotes = TryFindingNotes(map, replay, map.Notes);
 
-			if (foundNotes.Keys.Count < map.Notes.Count) {
+			if (foundNotes.Keys.Count < map.Notes.Length) {
 				var mirroredData = ChiralitySupport.Mirror_Horizontal(map.Difficulty.Data, 4, true, false);
 				var mirrored = MapWrapper.Process(new DifficultySet(map.Difficulty.Difficulty, map.Difficulty.Characteristic, mirroredData, map.Difficulty.BeatMap));
 				var foundMirrored = TryFindingNotes(map, replay, mirrored.Notes);
