@@ -170,6 +170,29 @@ namespace MapPostprocessor
                     //head.sliderhead = slider;
                 }
 
+                var tail = slider.TailBpmTime == slider.BpmTime
+                    ? null
+                    : Notes.FirstOrDefault(n => CompareSliderTail(n.Note, slider));
+                if (tail != null)
+                {
+                    if (tail.ScoringType == ScoringType.Normal)
+                    {
+                        tail.ScoringType = ScoringType.ArcTail;
+                    }
+                    else if (tail.ScoringType == ScoringType.ArcHead)
+                    {
+                        tail.ScoringType = ScoringType.ArcHeadArcTail;
+                    }
+                    else if (tail.ScoringType == ScoringType.ChainHead)
+                    {
+                        tail.ScoringType = ScoringType.ChainHeadArcTail;
+                    }
+                    else if (tail.ScoringType == ScoringType.ChainHeadArcHead)
+                    {
+                        tail.ScoringType = ScoringType.ChainHeadArcHeadArcTail;
+                    }
+                }
+
                 for (var i = 1; i < slider.SliceCount; ++i)
                 {
                     var chain = new Note
@@ -180,7 +203,7 @@ namespace MapPostprocessor
                         Color = slider.Color,
                     };
 
-                    chain.Seconds = LerpUnclamped(slider.Seconds, slider.TailInSeconds, i / (slider.SliceCount - 1));
+                    chain.Seconds = LerpUnclamped(slider.Seconds, slider.TailInSeconds, (float)i / (slider.SliceCount - 1));
 
                     Vector3 vector3_1 = new Vector3(head.X, head.Y, 0f);
 
@@ -240,6 +263,7 @@ namespace MapPostprocessor
                         chainRotation = NoteCutDirectionExtensions.SignedAngle(new Vector2(0.0f, -1f), tangent),
                         chainX = pos.X,
                         chainY = pos.Y,
+                        SliderData = slider
                     });
                 }
             }
@@ -315,6 +339,10 @@ namespace MapPostprocessor
 
                 mapnote.IdWithAlternativeScoring = id + (int)altscoringType * 10000;
                 mapnote.IdWithLegacyScoring = id + (int)legacyScoringType * 10000;
+
+                if (mapnote.ScoringType == ScoringType.ChainLink) {
+                    mapnote.IdWithAlternativeScoring = ((ChainWrapper)mapnote).SliderData.tx * 1000 + ((ChainWrapper)mapnote).SliderData.ty * 100 + colorType * 10 + cutDirection + (int)scoringType * 10000;
+                }
             }
         }
 
@@ -461,13 +489,13 @@ namespace MapPostprocessor
             var allCuttableObjects = new List<IWrapper<BeatmapGridObject>>(numberOfObjects);
             allCuttableObjects.AddRange(map.Notes);
             allCuttableObjects.AddRange(map.Bombs);
-            if (map.Chains is not null)
-            {
+
+            map.AddScoringTypeAndChains(difficulty.Data);
+            if (map.Chains != null) {
                 allCuttableObjects.AddRange(map.Chains);
             }
-
             map.AllCuttableObjects = allCuttableObjects.OrderBy(e => e.Time).ToArray();
-            map.AddScoringTypeAndChains(difficulty.Data);
+
             processTimingGroups(map);
             map.SetIds();
 

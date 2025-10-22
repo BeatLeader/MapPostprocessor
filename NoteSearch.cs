@@ -1,4 +1,5 @@
 ﻿using Parser.Map;
+using Parser.Map.Difficulty.V3.Base;
 using Parser.Utils;
 using ReplayDecoder;
 
@@ -6,7 +7,7 @@ namespace MapPostprocessor
 {
     public static class NoteSearch
     {
-	 	public static Dictionary<int, bool> TryFindingNotes(MapWrapper map, Replay replay, NoteWrapper[] mapnotes) {
+	 	public static Dictionary<int, bool> TryFindingNotes(MapWrapper map, Replay replay, List<IWrapper<BeatmapGridObject>> mapnotes) {
 			var foundNotes = new Dictionary<int, bool>();
 			var nonBombs = replay.notes.Where(n => n.eventType != NoteEventType.bomb).ToList();
 			foreach (var mapnote in mapnotes)
@@ -30,7 +31,7 @@ namespace MapPostprocessor
 				}
 			}
 
-			for (var j = 0; j < mapnotes.Length; j++) {
+			for (var j = 0; j < mapnotes.Count; j++) {
 				var mapnote = mapnotes[j];
 				if (mapnote.Event == null) {
 					for (var m = 0; m < nonBombs.Count; m++) {
@@ -83,25 +84,36 @@ namespace MapPostprocessor
 
         public static MapWrapper ForReplay(this MapWrapper map, Replay replay) {
 			var result = map;
-			foreach (var item in map.Notes)
-			{
-				item.Event = null;
-			}
-			foreach (var item in map.Bombs)
-			{
-				item.Event = null;
-			}
-			foreach (var item in map.Chains)
+
+            var allElements = new List<IWrapper<BeatmapGridObject>>();
+            allElements.AddRange(map.Notes);
+            allElements.AddRange(map.Bombs);
+            if (map.Chains != null) {
+                allElements.AddRange(map.Chains);
+            }
+            foreach (var item in allElements)
 			{
 				item.Event = null;
 			}
 
-			var foundNotes = TryFindingNotes(map, replay, map.Notes);
+			var foundNotes = TryFindingNotes(map, replay, allElements.OrderBy(n => n.Time).ToList());
 
 			if (foundNotes.Keys.Count < map.Notes.Length) {
 				var mirroredData = ChiralitySupport.Mirror_Horizontal(map.Difficulty.Data, 4, true, false);
 				var mirrored = MapWrapper.Process(new DifficultySet(map.Difficulty.Difficulty, map.Difficulty.Characteristic, mirroredData, map.Difficulty.BeatMap));
-				var foundMirrored = TryFindingNotes(map, replay, mirrored.Notes);
+                var mirroredElements = new List<IWrapper<BeatmapGridObject>>();
+                mirroredElements.AddRange(mirrored.Notes);
+                mirroredElements.AddRange(mirrored.Bombs);
+                if (mirrored.Chains != null) {
+                    mirroredElements.AddRange(mirrored.Chains);
+                }
+                foreach (var item in mirroredElements)
+			    {
+				    item.Event = null;
+			    }
+
+                var sortedMirrored = mirroredElements.OrderBy(n => n.Time).ToList();
+				var foundMirrored = TryFindingNotes(map, replay, sortedMirrored);
 
 				if (foundMirrored.Keys.Count > foundNotes.Keys.Count) {
 					result = mirrored;

@@ -8,11 +8,13 @@ namespace MapPostprocessor
     {
         private HttpClient httpClient = new();
         private string _mapsDirectory = "/home/maps";
+        private bool _deleteSong = false;
 
-        public MapDownloader(string mapsDirectory)
+        public MapDownloader(string mapsDirectory, bool deleteSong = false)
         {
             _mapsDirectory = mapsDirectory;
             httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (compatible; BeatSaverDownloader/1.0)");
+            _deleteSong = deleteSong;
         }
 
         public bool MapExists(string hash)
@@ -85,6 +87,15 @@ namespace MapPostprocessor
             using var zipArchive = new ZipArchive(zipStream);
             Directory.CreateDirectory(mapDir);
             zipArchive.ExtractToDirectory(mapDir);
+
+            if (_deleteSong) {
+                foreach (var item in Directory.EnumerateFiles(mapDir)) {
+                    if (item.EndsWith(".egg") || item.EndsWith(".ogg") || item.EndsWith(".wav")) {
+                        File.Delete(item);
+                    }
+                }
+            }
+            
 
             return mapDir;
         }
