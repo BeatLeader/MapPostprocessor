@@ -7,7 +7,7 @@ namespace MapPostprocessor
 {
     public static class NoteSearch
     {
-	 	public static Dictionary<int, bool> TryFindingNotes(MapWrapper map, Replay replay, List<IWrapper<BeatmapGridObject>> mapnotes) {
+	 	public static Dictionary<int, bool> TryFindingNotes(MapWrapper map, Replay replay, IWrapper<BeatmapGridObject>[] mapnotes) {
 			var foundNotes = new Dictionary<int, bool>();
 			var nonBombs = replay.notes.Where(n => n.eventType != NoteEventType.bomb).ToList();
 			foreach (var mapnote in mapnotes)
@@ -31,7 +31,7 @@ namespace MapPostprocessor
 				}
 			}
 
-			for (var j = 0; j < mapnotes.Count; j++) {
+			for (var j = 0; j < mapnotes.Length; j++) {
 				var mapnote = mapnotes[j];
 				if (mapnote.Event == null) {
 					for (var m = 0; m < nonBombs.Count; m++) {
@@ -57,11 +57,11 @@ namespace MapPostprocessor
 
 		public static Dictionary<int, bool> TryFindingBombs(MapWrapper map, Replay replay, BombWrapper[] mapnotes) {
 			var foundNotes = new Dictionary<int, bool>();
-			var nonBombs = replay.notes.Where(n => n.eventType == NoteEventType.bomb).ToList();
-			foreach (var mapnote in mapnotes)
-			{
-				for (var m = 0; m < nonBombs.Count; m++) {
-					var replaynote = nonBombs[m];
+			var bombs = replay.notes.Where(n => n.eventType == NoteEventType.bomb).ToList();
+			for (var j = 0; j < mapnotes.Length; j++) {
+				var mapnote = mapnotes[j];
+				for (var m = 0; m < bombs.Count; m++) {
+					var replaynote = bombs[m];
 
 					if (!foundNotes.ContainsKey(m)) {
 						if (
@@ -82,38 +82,38 @@ namespace MapPostprocessor
 			return foundNotes;
 		}
 
-        public static MapWrapper ForReplay(this MapWrapper map, Replay replay) {
-			var result = map;
+		public static Dictionary<int, bool> TryFindingWalls(MapWrapper map, Replay replay, WallWrapper[] mapnotes) {
+			var foundNotes = new Dictionary<int, bool>();
+			var walls = replay.walls.ToList();
+			for (var j = 0; j < mapnotes.Length; j++) {
+				var mapnote = mapnotes[j];
+				for (var m = 0; m < walls.Count; m++) {
+					var replaynote = walls[m];
 
-            var allElements = new List<IWrapper<BeatmapGridObject>>();
-            allElements.AddRange(map.Notes);
-            allElements.AddRange(map.Bombs);
-            if (map.Chains != null) {
-                allElements.AddRange(map.Chains);
-            }
-            foreach (var item in allElements)
-			{
-				item.Event = null;
+					if (!foundNotes.ContainsKey(m)) {
+						if (
+							replaynote.time >= mapnote.Note.Seconds && replaynote.time <= (mapnote.Note.Seconds + mapnote.Note.DurationInSeconds) &&
+							(replaynote.wallID == mapnote.Id)
+						) {
+							mapnote.WallEvent = replaynote;
+							foundNotes[m] = true;
+							break;
+						}
+					}
+				}
 			}
 
-			var foundNotes = TryFindingNotes(map, replay, allElements.OrderBy(n => n.Time).ToList());
+			return foundNotes;
+		}
+
+        public static MapWrapper ForReplay(this MapWrapper map, Replay replay) {
+			var result = map.Clone();
+
+			var foundNotes = TryFindingNotes(map, replay, result.AllCuttableObjects);
 
 			if (foundNotes.Keys.Count < map.Notes.Length) {
-				var mirroredData = ChiralitySupport.Mirror_Horizontal(map.Difficulty.Data, 4, true, false);
-				var mirrored = MapWrapper.Process(new DifficultySet(map.Difficulty.Difficulty, map.Difficulty.Characteristic, mirroredData, map.Difficulty.BeatMap));
-                var mirroredElements = new List<IWrapper<BeatmapGridObject>>();
-                mirroredElements.AddRange(mirrored.Notes);
-                mirroredElements.AddRange(mirrored.Bombs);
-                if (mirrored.Chains != null) {
-                    mirroredElements.AddRange(mirrored.Chains);
-                }
-                foreach (var item in mirroredElements)
-			    {
-				    item.Event = null;
-			    }
-
-                var sortedMirrored = mirroredElements.OrderBy(n => n.Time).ToList();
-				var foundMirrored = TryFindingNotes(map, replay, sortedMirrored);
+				var mirrored = map.MirroredMap;
+				var foundMirrored = TryFindingNotes(map, replay, mirrored.AllCuttableObjects);
 
 				if (foundMirrored.Keys.Count > foundNotes.Keys.Count) {
 					result = mirrored;
@@ -123,6 +123,7 @@ namespace MapPostprocessor
 			}
 
 			TryFindingBombs(result, replay, result.Bombs);
+			TryFindingWalls(result, replay, result.Walls);
 
 			return result;
         }

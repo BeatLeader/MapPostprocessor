@@ -1,18 +1,19 @@
 ﻿using Parser.Map;
 using Parser.Map.Difficulty.V3.Base;
 using Parser.Map.Difficulty.V3.Grid;
+using Parser.Utils;
 using System.Numerics;
 
 namespace MapPostprocessor
 {
     public class MapWrapper
     {
-        public DifficultySet Difficulty { get; set; }
         public NoteWrapper[] Notes { get; set; }
         public BombWrapper[] Bombs { get; set; }
         public WallWrapper[] Walls { get; set; }
         public ChainWrapper[]? Chains { get; set; }
         public IWrapper<BeatmapGridObject>[] AllCuttableObjects { get; set; }
+        public MapWrapper MirroredMap { get; set; }
 
         private bool CompareSlider(Note note, BeatmapColorGridObjectWithTail slider)
         {
@@ -478,9 +479,9 @@ namespace MapPostprocessor
             processGroup();
         }
 
-        public static MapWrapper Process(DifficultySet difficulty)
+        private static MapWrapper ProcessPrivate(DifficultySet difficulty)
         {
-            var map = new MapWrapper { Difficulty = difficulty };
+            var map = new MapWrapper();
 
             map.Notes = difficulty.Data.Notes.Select(n => new NoteWrapper { Note = n }).ToArray();
             map.Bombs = difficulty.Data.Bombs.Select(b => new BombWrapper { Note = b }).ToArray();
@@ -500,6 +501,91 @@ namespace MapPostprocessor
             map.SetIds();
 
             return map;
+        }
+
+        public static MapWrapper Process(DifficultySet difficulty)
+        {
+            var map = ProcessPrivate(difficulty);
+            var mirroredData = ChiralitySupport.Mirror_Horizontal(difficulty.Data, 4, true, false);
+            map.MirroredMap = ProcessPrivate(new DifficultySet(difficulty.Difficulty, difficulty.Characteristic, mirroredData, difficulty.BeatMap));
+
+            return map;
+        }
+
+        public MapWrapper Clone()
+        {
+            var clonedMap = new MapWrapper();
+
+            // Clone Notes
+            clonedMap.Notes = Notes.Select(n => new NoteWrapper
+            {
+                Note = n.Note,
+                ScoringType = n.ScoringType,
+                cutDirectionAngleOffset = n.cutDirectionAngleOffset,
+                Id = n.Id,
+                IdWithLegacyScoring = n.IdWithLegacyScoring,
+                IdWithAlternativeScoring = n.IdWithAlternativeScoring,
+                IdWithScoring = n.IdWithScoring
+            }).ToArray();
+
+            // Clone Bombs
+            clonedMap.Bombs = Bombs.Select(b => new BombWrapper
+            {
+                Note = b.Note,
+                ScoringType = b.ScoringType,
+                Id = b.Id,
+                IdWithLegacyScoring = b.IdWithLegacyScoring,
+                IdWithAlternativeScoring = b.IdWithAlternativeScoring,
+                IdWithScoring = b.IdWithScoring
+            }).ToArray();
+
+            // Clone Walls
+            clonedMap.Walls = Walls.Select(w => new WallWrapper
+            {
+                Note = w.Note,
+                ScoringType = w.ScoringType,
+                Id = w.Id,
+                IdWithLegacyScoring = w.IdWithLegacyScoring,
+                IdWithAlternativeScoring = w.IdWithAlternativeScoring,
+                IdWithScoring = w.IdWithScoring
+            }).ToArray();
+
+            // Clone Chains
+            if (Chains != null)
+            {
+                clonedMap.Chains = Chains.Select(c => new ChainWrapper
+                {
+                    Note = c.Note,
+                    SliderData = c.SliderData,
+                    ScoringType = c.ScoringType,
+                    SliceIndex = c.SliceIndex,
+                    chainX = c.chainX,
+                    chainY = c.chainY,
+                    chainRotation = c.chainRotation,
+                    Id = c.Id,
+                    IdWithLegacyScoring = c.IdWithLegacyScoring,
+                    IdWithAlternativeScoring = c.IdWithAlternativeScoring,
+                    IdWithScoring = c.IdWithScoring
+                }).ToArray();
+            }
+
+            // Clone AllCuttableObjects
+            var allCuttableObjects = new List<IWrapper<BeatmapGridObject>>();
+            allCuttableObjects.AddRange(clonedMap.Notes);
+            allCuttableObjects.AddRange(clonedMap.Bombs);
+            if (clonedMap.Chains != null)
+            {
+                allCuttableObjects.AddRange(clonedMap.Chains);
+            }
+            clonedMap.AllCuttableObjects = allCuttableObjects.OrderBy(e => e.Time).ToArray();
+
+            // Clone MirroredMap recursively (but MirroredMap's MirroredMap will point to the original)
+            if (MirroredMap != null)
+            {
+                clonedMap.MirroredMap = MirroredMap.Clone();
+            }
+
+            return clonedMap;
         }
     }
 }

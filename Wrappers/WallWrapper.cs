@@ -8,6 +8,8 @@ namespace MapPostprocessor
 
         override public Wall Note { get; set; }
 
+        public WallEvent? WallEvent { get; set; }
+
         override public ScoringType ScoringType { get; set; } = ScoringType.Ignore;
 
         override public int Color => 4;
