@@ -7,8 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\beatleader-parser\beatleader-parser\Parser.csproj" />
-    <ProjectReference Include="..\ReplayDecoder\ReplayDecoder\ReplayDecoder.csproj" />
+    <PackageReference Include="CommunityToolkit.HighPerformance" Version="8.4.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\simulator\beatleader-parser\beatleader-parser\Parser.csproj" />
+    <ProjectReference Include="..\simulator\ReplayDecoder\ReplayDecoder\ReplayDecoder.csproj" />
   </ItemGroup>
 
 </Project>
