@@ -206,7 +206,44 @@ namespace MapPostprocessor
 
                     chain.Seconds = LerpUnclamped(slider.Seconds, slider.TailInSeconds, (float)i / (slider.SliceCount - 1));
 
-                    Vector3 vector3_1 = new Vector3(head.X, head.Y, 0f);
+                    Vector3 vector3_1;
+                    double headCutOffset = 0;
+
+                    if (head == null) {
+                        float hHorizontalPosition = slider.x;
+                        if (slider.customData?.coordinates != null)
+                        {
+                            hHorizontalPosition = slider.customData?.coordinates[0] + 4 / 2 ?? 0;
+                        }
+
+                        if (hHorizontalPosition <= -1000 || hHorizontalPosition >= 1000)
+                        {
+                            hHorizontalPosition = hHorizontalPosition < 0
+                                ? hHorizontalPosition / 1000 + 1
+                                : hHorizontalPosition / 1000 - 1;
+                        }
+
+                        float headX = GenericWrapper<BeatmapGridObject>.GetHorizontalPosition(hHorizontalPosition);
+                        float hVerticalPosition = slider.y;
+                        if (slider.customData?.coordinates != null)
+                        {
+                            hVerticalPosition = slider.customData?.coordinates[1] ?? 0;
+                        }
+
+                        if (hVerticalPosition <= -1000 || hVerticalPosition >= 1000)
+                        {
+                            hVerticalPosition = hVerticalPosition < 0
+                                ? hVerticalPosition / 1000 + 1
+                                : hVerticalPosition / 1000 - 1;
+                        }
+
+                        float headY = GenericWrapper<BeatmapGridObject>.HighestJumpPosYForLineLayer(hVerticalPosition);
+                        vector3_1 = new Vector3(headX, headY, 0f);
+
+                    } else {
+                        vector3_1 = new Vector3(head.X, head.Y, 0f);
+                        headCutOffset = head.cutDirectionAngleOffset;
+                    }
 
                     float horizontalPosition = slider.tx;
                     if (slider.customData?.tailCoordinates != null)
@@ -237,12 +274,14 @@ namespace MapPostprocessor
 
                     float tailY = GenericWrapper<BeatmapGridObject>.HighestJumpPosYForLineLayer(verticalPosition);
                     Vector3 vector3_2 = new Vector3(tailX, tailY, 0f);
+
+                    
                     Vector2 p2 = new Vector2(vector3_2.X - vector3_1.X, vector3_2.Y - vector3_1.Y);
                     float magnitude = p2.Length();
                     float f =
                         (float)(
                             ((double)NoteCutDirectionExtensions.RotationAngle((NoteCutDirection)slider.CutDirection) -
-                                90.0 + (double)head.cutDirectionAngleOffset) * (Math.PI / 180.0));
+                                90.0 + headCutOffset) * (Math.PI / 180.0));
 
                     Vector2 p1 = (0.5f * magnitude * new Vector2((float)Math.Cos(f), (float)Math.Sin(f)));
                     int sliceCount = slider.SliceCount;
@@ -586,6 +625,204 @@ namespace MapPostprocessor
             }
 
             return clonedMap;
+        }
+    }
+
+    public enum MultiplierEventType
+    {
+        Positive,
+        Neutral,
+        Negative
+    }
+
+    public class NoteScoreDefinition
+    {
+        public readonly int maxCenterDistanceCutScore;
+        public readonly int minBeforeCutScore;
+        public readonly int maxBeforeCutScore;
+        public readonly int minAfterCutScore;
+        public readonly int maxAfterCutScore;
+        public readonly int fixedCutScore;
+
+        public int maxCutScore => this.maxCenterDistanceCutScore + this.maxBeforeCutScore + this.maxAfterCutScore + this.fixedCutScore;
+
+        public int executionOrder => this.maxCutScore;
+
+        public NoteScoreDefinition(
+            int maxCenterDistanceCutScore,
+            int minBeforeCutScore,
+            int maxBeforeCutScore,
+            int minAfterCutScore,
+            int maxAfterCutScore,
+            int fixedCutScore)
+        {
+            this.maxCenterDistanceCutScore = maxCenterDistanceCutScore;
+            this.minBeforeCutScore = minBeforeCutScore;
+            this.maxBeforeCutScore = maxBeforeCutScore;
+            this.minAfterCutScore = minAfterCutScore;
+            this.maxAfterCutScore = maxAfterCutScore;
+            this.fixedCutScore = fixedCutScore;
+        }
+    }
+
+    public class MaxScoreCounterElement
+    {
+        public NoteScoreDefinition ScoreDef { get; }
+        public float Time { get; }
+
+        public MaxScoreCounterElement(NoteScoreDefinition scoreDef, float time)
+        {
+            ScoreDef = scoreDef;
+            Time = time;
+        }
+    }
+
+    public class ScoreMultiplierCounter
+    {
+        public int Multiplier { get; }
+        public int MultiplierIncreaseProgress { get; }
+        public int MultiplierIncreaseMaxProgress { get; }
+
+        public ScoreMultiplierCounter(int multiplier = 1, int multiplierIncreaseProgress = 0, int multiplierIncreaseMaxProgress = 2)
+        {
+            Multiplier = multiplier;
+            MultiplierIncreaseProgress = multiplierIncreaseProgress;
+            MultiplierIncreaseMaxProgress = multiplierIncreaseMaxProgress;
+        }
+
+        public float NormalizedProgress() => MultiplierIncreaseProgress / (float)MultiplierIncreaseMaxProgress;
+
+        public ScoreMultiplierCounter ProcessMultiplierEvent(MultiplierEventType type)
+        {
+            switch (type)
+            {
+                case MultiplierEventType.Positive:
+                    if (Multiplier < 8)
+                    {
+                        if (MultiplierIncreaseProgress >= MultiplierIncreaseMaxProgress - 1)
+                        {
+                            return new ScoreMultiplierCounter(Multiplier * 2, 0, Multiplier * 4);
+                        } else
+                        {
+                            return new ScoreMultiplierCounter(Multiplier, MultiplierIncreaseProgress + 1, MultiplierIncreaseMaxProgress);
+                        }
+                    } else
+                    {
+                        return this;
+                    }
+                case MultiplierEventType.Negative:
+                    if (MultiplierIncreaseProgress > 0)
+                    {
+                        return new ScoreMultiplierCounter(Multiplier, 0, MultiplierIncreaseMaxProgress);
+                    } else if (Multiplier > 1)
+                    {
+                        return new ScoreMultiplierCounter(Multiplier / 2, MultiplierIncreaseProgress, Multiplier);
+                    } else
+                    {
+                        return this;
+                    }
+                case MultiplierEventType.Neutral:
+                    return this;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(type), "Unknown MultiplierEventType");
+            }
+        }
+    }
+
+    public static class ScoringExtensions
+    {
+        public static readonly Dictionary<ScoringType, NoteScoreDefinition> ScoreDefinitions = new Dictionary<ScoringType, NoteScoreDefinition>()
+        {
+            {
+                ScoringType.Ignore,
+                (NoteScoreDefinition) null
+            },
+            {
+                ScoringType.NoScore,
+                new NoteScoreDefinition(0, 0, 0, 0, 0, 0)
+            },
+            {
+                ScoringType.Normal,
+                new NoteScoreDefinition(15, 0, 70, 0, 30, 0)
+            },
+            {
+                ScoringType.ArcHead,
+                new NoteScoreDefinition(15, 0, 70, 30, 30, 0)
+            },
+            {
+                ScoringType.ArcTail,
+                new NoteScoreDefinition(15, 70, 70, 0, 30, 0)
+            },
+            {
+                ScoringType.ChainHead,
+                new NoteScoreDefinition(15, 0, 70, 0, 0, 0)
+            },
+            {
+                ScoringType.ChainLink,
+                new NoteScoreDefinition(0, 0, 0, 0, 0, 20)
+            },
+            {
+                ScoringType.ArcHeadArcTail,
+                new NoteScoreDefinition(15, 70, 70, 30, 30, 0)
+            },
+            {
+                ScoringType.ChainHeadArcTail,
+                new NoteScoreDefinition(15, 70, 70, 30, 30, 0)
+            },
+            {
+                ScoringType.ChainLinkArcHead,
+                new NoteScoreDefinition(0, 0, 0, 0, 0, 20)
+            },
+            {
+                ScoringType.ChainHeadArcHead,
+                new NoteScoreDefinition(15, 0, 70, 30, 30, 0)
+            },
+            {
+                ScoringType.ChainHeadArcHeadArcTail,
+                new NoteScoreDefinition(15, 70, 70, 30, 30, 0)
+            }
+        };
+
+        public static List<(float, int)> MaxScoreGraph(this MapWrapper self)
+        {
+            var maxScores = new List<(float, int)>();
+            var smc = new ScoreMultiplierCounter();
+            var score = 0;
+            foreach (var item in self.AllCuttableObjects.Where(n => n.ScoringType >= ScoringType.Normal)) {
+                smc = smc.ProcessMultiplierEvent(MultiplierEventType.Positive);
+                score += ScoreDefinitions[item.ScoringType].maxCutScore * smc.Multiplier;
+
+                maxScores.Add((item.Time, score));
+            }
+
+            return maxScores;
+        }
+
+        public static bool IsV3Pepega(this DifficultySet self)
+        {
+            var notes = self.Data.Notes.Where(note => note.Color == 0 || note.Color == 1);
+            var sliders = self.Data.Arcs;
+            var burstSliders = self.Data.Chains;
+
+            var slidersByBeat = sliders.GroupBy(s => s.BpmTime).ToDictionary(g => g.Key, g => g.ToList());
+            var slidersByTailBeat = sliders.GroupBy(s => s.TailBpmTime).ToDictionary(g => g.Key, g => g.ToList());
+            var burstSlidersByBeat = burstSliders.GroupBy(s => s.BpmTime).ToDictionary(g => g.Key, g => g.ToList());
+
+            var noteItems = notes.Any(note =>
+            {
+                var matchesHead = slidersByBeat.ContainsKey(note.BpmTime) && slidersByBeat[note.BpmTime].Any(s => note.Color == s.Color && note.x == s.x && note.y == s.y);
+                var matchesTail = slidersByTailBeat.ContainsKey(note.BpmTime) && slidersByTailBeat[note.BpmTime].Any(s => note.Color == s.Color && note.x == s.tx && note.y == s.ty);
+                var matchesBurst = burstSlidersByBeat.ContainsKey(note.BpmTime) && burstSlidersByBeat[note.BpmTime].Any(s => note.Color == s.Color && note.x == s.x && note.y == note.y);
+
+                return matchesBurst && matchesHead && matchesTail || matchesBurst && matchesHead || matchesBurst && matchesTail || matchesHead && matchesTail;
+            });
+
+            return noteItems;
+        }
+
+        public static int MaxScore(this MapWrapper self) {
+            var graph = MaxScoreGraph(self);
+            return graph.Count > 0 ? graph.Last().Item2 : 0;
         }
     }
 }
