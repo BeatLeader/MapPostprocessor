@@ -111,36 +111,40 @@ namespace MapPostprocessor
 
             foreach (var slider in difficulty.Arcs)
             {
-                var head = Notes.FirstOrDefault(n => CompareSlider(n.Note, slider));
-                if (head != null)
+                var heads = Notes.Where(n => CompareSlider(n.Note, slider)).ToList();
+                if (heads.Count() > 0)
                 {
-                    if (head.ScoringType == ScoringType.Normal)
-                    {
-                        head.ScoringType = ScoringType.ArcHead;
-                    }
-                    else if (head.ScoringType == ScoringType.ArcTail)
-                    {
-                        head.ScoringType = ScoringType.ArcHeadArcTail;
+                    foreach (var head in heads) {
+                        if (head.ScoringType == ScoringType.Normal)
+                        {
+                            head.ScoringType = ScoringType.ArcHead;
+                        }
+                        else if (head.ScoringType == ScoringType.ArcTail)
+                        {
+                            head.ScoringType = ScoringType.ArcHeadArcTail;
+                        }
                     }
                 }
 
-                var tail = slider.TailBpmTime == slider.BpmTime
+                var tails = slider.TailBpmTime == slider.BpmTime
                     ? null
-                    : Notes.FirstOrDefault(n => CompareSliderTail(n.Note, slider));
+                    : Notes.Where(n => CompareSliderTail(n.Note, slider)).ToList();
                 //if (head) {
                 //	head.tail = tail;
                 //}
 
                 //slider.tail = tail;
-                if (tail != null)
+                if (tails != null && tails.Count() > 0) 
                 {
-                    if (tail.ScoringType == ScoringType.Normal)
-                    {
-                        tail.ScoringType = ScoringType.ArcTail;
-                    }
-                    else if (tail.ScoringType == ScoringType.ArcHead)
-                    {
-                        tail.ScoringType = ScoringType.ArcHeadArcTail;
+                    foreach (var tail in tails) {
+                        if (tail.ScoringType == ScoringType.Normal)
+                        {
+                            tail.ScoringType = ScoringType.ArcTail;
+                        }
+                        else if (tail.ScoringType == ScoringType.ArcHead)
+                        {
+                            tail.ScoringType = ScoringType.ArcHeadArcTail;
+                        }
                     }
                 }
             }

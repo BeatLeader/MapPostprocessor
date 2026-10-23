@@ -90,12 +90,15 @@ namespace MapPostprocessor
                 return null;
             }
 
-            var data = await httpClient.GetByteArrayAsync(downloadURL);
+            try {
+                var data = await httpClient.GetByteArrayAsync(downloadURL);
 
-            using var zipStream = new MemoryStream(data);
-            using var zipArchive = new ZipArchive(zipStream);
-            Directory.CreateDirectory(mapDir);
-            zipArchive.ExtractToDirectory(mapDir, true);
+                using var zipStream = new MemoryStream(data);
+                using var zipArchive = new ZipArchive(zipStream);
+                Directory.CreateDirectory(mapDir);
+                zipArchive.ExtractToDirectory(mapDir, true);
+            } catch (Exception e) {
+            }
 
             if (_deleteSong) {
                 foreach (var item in Directory.EnumerateFiles(mapDir)) {
